@@ -5,6 +5,8 @@ lightweight sensor router that refuses imagery no trained sensor supports. Part 
 M.Tech project *Leakage-Audited Aircraft Detection Across Optical, Thermal-Infrared
 and SAR Imagery* (Poojha Muralidharan, Amrita School of Computing).
 
+**Project website:** https://poojhamurali.github.io/unified-aircraft-detection/
+
 The three sensor-specific experts and the dataset audits live in the companion
 repository [aircraft-detection-yolo-experts](https://github.com/poojhamurali/aircraft-detection-yolo-experts).
 

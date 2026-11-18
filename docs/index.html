@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leakage-Audited Aircraft Detection Across Optical, Thermal-Infrared and SAR Imagery</title>
+<meta name="description" content="One YOLOv8s aircraft detector for optical, thermal-infrared and SAR imagery, trained on leakage-audited splits, with a sensor router that refuses unsupported images.">
+<style>
+  :root {
+    --ink: #1e293b; --muted: #475569; --line: #e2e8f0; --bg: #f8fafc;
+    --accent: #1d4ed8; --accent-soft: #dbeafe; --good: #15803d; --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: #fff; }
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.95); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+  nav .wrap { display: flex; gap: 18px; align-items: center; overflow-x: auto; white-space: nowrap; padding: 12px 20px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+  nav a:hover { color: var(--accent); }
+  nav .brand { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  header { background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #fff; padding: 64px 0 56px; }
+  header h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.2; margin: 0 0 14px; }
+  header p.lead { font-size: 18px; color: #cbd5e1; max-width: 780px; margin: 0 0 22px; }
+  header .meta { font-size: 14px; color: #cbd5e1; }
+  header .meta strong { color: #fff; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .btn { display: inline-block; padding: 9px 16px; border-radius: 8px; background: #fff; color: #1e3a8a; font-weight: 600; text-decoration: none; font-size: 14px; }
+  .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+  section { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  section:nth-of-type(even) { background: var(--bg); }
+  h2 { font-size: 26px; margin: 0 0 18px; }
+  h3 { font-size: 19px; margin: 28px 0 10px; }
+  p { margin: 0 0 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 22px 0 6px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card .big { font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .card .label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  figure { margin: 22px 0; }
+  figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 14px 0 8px; background: #fff; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f1f5f9; font-weight: 600; }
+  tr.highlight td { background: var(--accent-soft); font-weight: 600; }
+  .note { font-size: 14px; color: var(--muted); }
+  .table-scroll { overflow-x: auto; }
+  ol.steps, ul.points { padding-left: 22px; margin: 0 0 14px; }
+  ol.steps li, ul.points li { margin-bottom: 8px; }
+  .flow { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #0f172a; color: #e2e8f0; padding: 16px 18px; border-radius: 10px; font-size: 14px; overflow-x: auto; white-space: pre; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+  pre.cmd { background: #0f172a; color: #e2e8f0; padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-size: 14px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); margin-right: 6px; }
+  footer { padding: 30px 0 40px; color: var(--muted); font-size: 14px; }
+  footer a, section a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">Aircraft Detection</span>
+    <a href="#overview">Overview</a>
+    <a href="#problem">Problem</a>
+    <a href="#datasets">Datasets</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#findings">Key findings</a>
+    <a href="#code">Code</a>
+    <a href="#limitations">Limitations</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <h1>Leakage-Audited Aircraft Detection Across Optical, Thermal-Infrared and SAR Imagery</h1>
+    <p class="lead">One YOLOv8s detector that finds aircraft in optical, thermal-infrared and radar images without being told which sensor took the image, trained and tested on data that was checked for train/test leakage, with a lightweight router that refuses images no trained sensor supports.</p>
+    <div class="meta">
+      <strong>Poojha Muralidharan</strong> (CB.SC.P2AIE25033) &middot; Guide: <strong>Dr. S. Padmavathi</strong><br>
+      M.Tech Artificial Intelligence, Dissertation Phase I &middot; Amrita School of Computing, Amrita Vishwa Vidyapeetham, Coimbatore &middot; 2026
+    </div>
+    <div class="buttons">
+      <a class="btn" href="https://github.com/poojhamurali/unified-aircraft-detection">Unified model code</a>
+      <a class="btn ghost" href="https://github.com/poojhamurali/aircraft-detection-yolo-experts">Sensor-expert code</a>
+    </div>
+  </div>
+</header>
+
+<section id="overview">
+  <div class="wrap">
+    <h2>Overview</h2>
+    <p>Optical satellite images fail under cloud and at night, thermal images show aircraft as tiny heat blobs, and radar (SAR) images show them as bright dots in grainy speckle. Each sensor covers a gap left by the others, so a practical system should accept an image from any of them.</p>
+    <p>This project builds such a system and measures it honestly. Three public aircraft datasets were audited, and every one of their original train/test splits was found to leak test images into training. On rebuilt, leakage-free splits, a single YOLOv8s detector matches three separate sensor-specific detectors, and a small router based on eight image statistics rejects images that do not come from any trained sensor.</p>
+    <div class="cards">
+      <div class="card"><div class="big">1 model</div><div class="label">replaces three sensor-specific detectors</div></div>
+      <div class="card"><div class="big">0.993</div><div class="label">optical mAP@0.5</div></div>
+      <div class="card"><div class="big">0.809</div><div class="label">SAR mAP@0.5</div></div>
+      <div class="card"><div class="big">614 &rarr; 0</div><div class="label">false aircraft on aircraft-free images after refusal</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap">
+    <h2>Problem</h2>
+    <p>The goal is to detect aircraft in optical, thermal-infrared and SAR images with one system that needs no sensor label, and to report accuracy that reflects real generalisation. Three questions drive the work:</p>
+    <ol class="steps">
+      <li>Do the train/test splits shipped with public aircraft datasets leak, and by how much do they inflate accuracy?</li>
+      <li>On leakage-free splits, does a multi-sensor system need separate detectors, sensor conditioning or routing, or is one shared detector enough?</li>
+      <li>What should a detector do with an image that comes from none of the sensors it was trained on?</li>
+    </ol>
+    <p>The task is hard because targets are small (median 26&ndash;72 pixels), each sensor looks completely different, and no public dataset shows the same aircraft in all three sensors, so the images cannot simply be fused.</p>
+  </div>
+</section>
+
+<section id="datasets">
+  <div class="wrap">
+    <h2>Datasets</h2>
+    <div class="table-scroll">
+    <table>
+      <tr><th></th><th>Optical: HRPlanesv2</th><th>Thermal IR: IRdata-4465</th><th>SAR: SARDet-100K (aircraft)</th></tr>
+      <tr><td>Images / aircraft boxes</td><td>2,120 / 14,333</td><td>4,465 / 4,568</td><td>19,879 / 52,669</td></tr>
+      <tr><td>Source</td><td>Google Earth, 31 airports</td><td>372 airborne thermal videos</td><td>Gaofen-3, TerraSAR-X, HISEA-1</td></tr>
+      <tr><td>Unique images</td><td>2,114</td><td>1,931</td><td>13,268</td></tr>
+      <tr><td>Leak in the original split</td><td>100% of test images from training airports</td><td>83% of evaluation files are copies of training frames</td><td>Overlapping tiles of shared scenes</td></tr>
+      <tr><td>Clean split (train / val / test)</td><td>1,480 / 317 / 317</td><td>1,389 / 300 / 242</td><td>14,867 / 1,726 / 2,998</td></tr>
+    </table>
+    </div>
+    <figure><img src="img/optical_samples.jpg" alt="Optical airport scene with labelled aircraft" loading="lazy"><figcaption>Optical: a full 4800&times;2703 airport scene and one magnified aircraft.</figcaption></figure>
+    <figure><img src="img/ir_samples.jpg" alt="Thermal infrared frames with labelled targets" loading="lazy"><figcaption>Thermal infrared: one frame per class (airplane, bird, drone, helicopter) and the magnified target.</figcaption></figure>
+    <figure><img src="img/sar_samples.jpg" alt="SAR patches with labelled aircraft" loading="lazy"><figcaption>SAR: aircraft appear as clusters of bright scattering points in speckle.</figcaption></figure>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <h2>Method</h2>
+    <figure><img src="img/framework.png" alt="Study pipeline: datasets, leakage audit, audited splits, detectors, evaluation" loading="lazy"><figcaption>The pipeline: every dataset goes through the same four-step audit before any model is trained.</figcaption></figure>
+
+    <h3>1. Leakage audit</h3>
+    <ol class="steps">
+      <li><strong>Exact copies:</strong> every file is fingerprinted (MD5) to find identical images.</li>
+      <li><strong>Near-copies:</strong> images are shrunk to 64&times;64 grey thumbnails and compared pixel by pixel; the similarity threshold is calibrated against unrelated image pairs.</li>
+      <li><strong>Same source:</strong> images from the same airport (optical), the same video (thermal) or overlapping tiles (SAR) are linked.</li>
+      <li><strong>Group and split:</strong> linked images form groups, and each group goes entirely into training, validation or test. A separate script verifies the result.</li>
+    </ol>
+
+    <h3>2. SAR tile-overlap check</h3>
+    <p>SARDet-100K cuts large radar images into 512-pixel tiles that overlap by 200 pixels. Neighbouring tiles share an identical strip but look different as whole images, so ordinary duplicate checks miss them. A strip-matching check compares the edge strip of every tile with the opposite edge of every other tile and found <strong>8,637 pixel-identical overlaps</strong>.</p>
+    <figure><img src="img/sar_overlap.jpg" alt="Two overlapping SAR tiles, one in training and one in test" loading="lazy"><figcaption>Two adjacent tiles of one scene: the outlined strips are pixel-identical, so the same five aircraft appeared in both a training and a test image of a randomly re-split dataset.</figcaption></figure>
+
+    <h3>3. One pooled detector</h3>
+    <ul class="points">
+      <li>All three clean training sets are merged with a single class, <code>aircraft</code> (thermal birds become background).</li>
+      <li>Each training epoch draws 2,000 images per sensor, so the much larger SAR set cannot dominate.</li>
+      <li>Mosaic augmentation only combines images from the same sensor, and only augmentations valid for all three sensors are used (no colour-hue change, rotation or vertical flip).</li>
+      <li>Three variants add FiLM conditioning on a sensor token and/or eight measured image statistics, to test whether telling the model about the sensor helps.</li>
+    </ul>
+    <figure><img src="img/conditioned_yolo.png" alt="Conditioned YOLOv8s architecture with FiLM adapters" loading="lazy"><figcaption>The conditioned variants: QualityNet and a sensor token set a per-channel scale and shift in eight YOLOv8s layers. The final system uses the plain pooled model, because conditioning did not help.</figcaption></figure>
+
+    <h3>4. Router and refusal</h3>
+    <p>A random forest on eight image statistics and a small CNN on a thumbnail identify the sensor of each image and vote. A Gaussian model of the statistics flags images that resemble no trained sensor, and the system refuses them instead of producing detections.</p>
+    <figure><img src="img/stats_by_sensor.png" alt="Eight image statistics by sensor" loading="lazy"><figcaption>The eight statistics separate the sensors: optical images are the only colourful ones, SAR images are dark and speckled, and thermal images have the widest dynamic range.</figcaption></figure>
+    <div class="flow">any image (optical, thermal or SAR)
+   &rarr; router: does it look like a trained sensor?
+        no  &rarr; refuse (no detections)
+        yes &rarr; one pooled YOLOv8s &rarr; aircraft boxes</div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2>Results</h2>
+
+    <h3>How much leakage inflated accuracy</h3>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Dataset</th><th>Comparison</th><th>Leaky mAP@0.5</th><th>Clean mAP@0.5</th><th>Inflation</th></tr>
+      <tr><td>Optical</td><td>Same test images, model had seen 68% of them</td><td>0.993</td><td>0.970</td><td>+0.023</td></tr>
+      <tr><td>Thermal IR</td><td>Original split vs sequence-disjoint split</td><td>0.745</td><td>0.556</td><td>+0.189</td></tr>
+      <tr><td>SAR</td><td>Original split vs its scene-clean part</td><td>0.787</td><td>0.783</td><td>+0.004</td></tr>
+      <tr><td>SAR</td><td>De-duplicated random re-split vs scene-clean part</td><td>0.851</td><td>0.818</td><td>+0.033</td></tr>
+    </table>
+    </div>
+    <figure><img src="img/leakage_cost.png" alt="Bar chart of leaky versus clean accuracy per dataset" loading="lazy" style="max-width:640px"></figure>
+
+    <h3>Three experts vs one pooled detector</h3>
+    <p class="note">Test mAP@0.5 / mAP@0.5:0.95 on each sensor's clean test set. The second number also rewards tight boxes.</p>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Model</th><th>Optical</th><th>Thermal IR</th><th>SAR</th></tr>
+      <tr><td>Separate sensor expert</td><td>0.993 / 0.859</td><td>0.688 / 0.382</td><td>0.783 / 0.450</td></tr>
+      <tr class="highlight"><td>One pooled YOLOv8s (final model)</td><td>0.993 / 0.855</td><td>0.704 / 0.380</td><td>0.809 / 0.437</td></tr>
+      <tr><td>+ sensor token (FiLM)</td><td>0.993 / 0.855</td><td>0.721 / 0.385</td><td>0.788 / 0.422</td></tr>
+      <tr><td>+ image statistics (FiLM)</td><td>0.993 / 0.856</td><td>0.714 / 0.386</td><td>0.796 / 0.425</td></tr>
+      <tr><td>+ both (FiLM)</td><td>0.993 / 0.855</td><td>0.711 / 0.372</td><td>0.779 / 0.414</td></tr>
+    </table>
+    </div>
+
+    <h3>Routing and refusal</h3>
+    <ul class="points">
+      <li>The router sends 99.5% (statistics), 99.97% (CNN) and 100% (vote) of test images to the right sensor expert, yet routing to experts does not beat the pooled detector.</li>
+      <li>Trained without one SAR satellite, it still recognises 100% (Gaofen-3), 97.2% (HISEA-1) and 84.8% (TerraSAR-X) of that satellite's images as SAR.</li>
+      <li>On 48 aircraft-free, low-resolution images, the experts produced 614 false aircraft; the refusal rule rejected all 48 images, at the cost of wrongly refusing 1.5% of normal test images.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="wrap">
+    <h2>Key findings</h2>
+    <div class="two">
+      <div class="card"><span class="pill">Data</span><p>All three public aircraft datasets leak test images into training, each in a different way: shared airports, copied video frames and overlapping SAR tiles.</p></div>
+      <div class="card"><span class="pill">Data</span><p>Removing duplicates is not enough for tiled SAR data: 34.7% of re-split test images still shared a scene with training. The official SARDet-100K test split is the reliable one.</p></div>
+      <div class="card"><span class="pill">Model</span><p>One plain pooled YOLOv8s matches three sensor-specific detectors, and needs no sensor label. Sensor conditioning adds no consistent gain.</p></div>
+      <div class="card"><span class="pill">Model</span><p>One augmentation setting (rotating training images up to 180&deg;) cost 0.23 mAP@0.5:0.95, more than any model change, so compared models must share augmentation.</p></div>
+      <div class="card"><span class="pill">System</span><p>A sensor router is most useful as a gatekeeper: it removed every false aircraft on unsupported images.</p></div>
+      <div class="card"><span class="pill">Practice</span><p>Split by source (airport, video or scene), check tiled data for overlaps, report validation and test separately, and give compared models the same augmentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <div class="wrap">
+    <h2>Code and reproducibility</h2>
+    <div class="two">
+      <div class="card">
+        <h3 style="margin-top:0">unified-aircraft-detection</h3>
+        <p>The single pooled detector, FiLM variants, sensor router and refusal evaluation.</p>
+        <a href="https://github.com/poojhamurali/unified-aircraft-detection">github.com/poojhamurali/unified-aircraft-detection</a>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">aircraft-detection-yolo-experts</h3>
+        <p>The three sensor-specific detectors, dataset audits, clean-split builders and the SAR tile-overlap check.</p>
+        <a href="https://github.com/poojhamurali/aircraft-detection-yolo-experts">github.com/poojhamurali/aircraft-detection-yolo-experts</a>
+      </div>
+    </div>
+    <h3>Quick start</h3>
+<pre class="cmd">git clone https://github.com/poojhamurali/aircraft-detection-yolo-experts
+git clone https://github.com/poojhamurali/unified-aircraft-detection
+cd unified-aircraft-detection
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/build_dataset.py --rebuild   # after preparing the expert datasets
+python scripts/smoke_test.py
+bash scripts/run_ablation.sh 30</pre>
+    <p class="note">Built with Python 3.9, PyTorch 2.8 and Ultralytics 8.4, trained on an Apple-silicon GPU. Datasets and trained weights are not included; each repository's README explains where to get and place them.</p>
+  </div>
+</section>
+
+<section id="limitations">
+  <div class="wrap">
+    <h2>Limitations and future work</h2>
+    <ul class="points">
+      <li>The thermal data are airborne views of flying targets, not overhead images; overhead thermal data (TIFAD, SDGSAT-1) would align the three sensors once its scenes are obtained.</li>
+      <li>Each model was trained with one random seed; the main effects are far larger than the measured seed-to-seed spread of about 0.01.</li>
+      <li>The SAR overlap check finds exact 200-pixel neighbours only, so it gives a lower bound, and the dataset carries no airport names.</li>
+      <li>The refusal rule was tested on one kind of unsupported imagery; cloudy, noisy and wrong-resolution images are next.</li>
+      <li>Planned: extra training seeds, external optical test sets (CORS-ADD, MAR20), temporal cues from thermal video, and ONNX export for edge deployment.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Poojha Muralidharan &middot; M.Tech Artificial Intelligence, Amrita School of Computing, Coimbatore &middot; Guide: Dr. S. Padmavathi &middot;
+    <a href="https://github.com/poojhamurali">github.com/poojhamurali</a>
+  </div>
+</footer>
+
+</body>
+</html>
