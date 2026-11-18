@@ -1,0 +1,12 @@
+# data, runs and weights stay local
+datasets/
+outputs/
+*.pt
+*.cache
+*.log
+
+# environment
+.venv/
+__pycache__/
+.idea/
+.DS_Store
